@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Speech Studio — L1 Fluency Diagnostic</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#ffffff;--bg2:#f7f7f5;--bg3:#f0efe9;
+    --text:#1a1a18;--text2:#6b6b67;--text3:#9b9b96;
+    --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.2);
+    --blue:#378ADD;--blue-bg:#E6F1FB;--blue-tc:#0C447C;
+    --green:#2E9E5B;--green-bg:#E7F6EC;
+    --red:#D64545;--red-bg:#FBEAEA;
+    --gold:#B08D57;
+    --radius:8px;--radius-lg:14px;
+    --shadow:0 1px 3px rgba(0,0,0,0.06),0 8px 24px rgba(0,0,0,0.04);
+  }
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg3);color:var(--text)}
+  .page{max-width:760px;margin:0 auto;padding:2.5rem 1.25rem 4rem}
+  header{text-align:center;margin-bottom:1.5rem}
+  .kicker{font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+  h1{font-size:26px;font-weight:700;margin-bottom:8px}
+  .sub{font-size:14px;color:var(--text2);max-width:520px;margin:0 auto}
+  a.back{display:inline-block;font-size:13px;color:var(--text2);text-decoration:underline;margin-bottom:1.25rem}
+
+  .tabs{display:flex;gap:8px;margin-bottom:1.25rem;flex-wrap:wrap}
+  .tab{padding:10px 16px;border-radius:20px;border:0.5px solid var(--border2);background:var(--bg);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+  .tab.active{background:var(--text);color:#fff;border-color:var(--text)}
+
+  .panel{background:var(--bg);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:1.75rem;display:none}
+  .panel.active{display:block}
+
+  /* Speech pace */
+  .mic-btn{width:100%;padding:16px;border-radius:var(--radius);border:none;background:var(--blue);color:#fff;font-size:15px;font-weight:600;cursor:pointer}
+  .mic-btn.recording{background:var(--red)}
+  .mic-btn:disabled{opacity:0.4;cursor:not-allowed}
+  .transcript{margin-top:1rem;padding:12px 14px;background:var(--bg2);border-radius:var(--radius);font-size:13px;color:var(--text2);min-height:60px;line-height:1.6}
+  .pace-result{margin-top:1.25rem;display:none}
+  .pace-number{font-size:40px;font-weight:700}
+  .pace-label{font-size:13px;color:var(--text2)}
+  .pace-band{margin-top:10px;padding:10px 14px;border-radius:var(--radius);font-size:13px;line-height:1.6}
+  .not-supported{background:var(--red-bg);color:var(--red);padding:12px 14px;border-radius:var(--radius);font-size:13px}
+
+  /* Quiz shared */
+  .q-progress{font-size:12px;color:var(--text3);margin-bottom:10px}
+  .q-text{font-size:17px;font-weight:600;margin-bottom:1rem;line-height:1.5}
+  .q-options{display:flex;flex-direction:column;gap:8px}
+  .q-opt{padding:12px 14px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg2);font-size:14px;text-align:left;cursor:pointer;font-family:inherit;color:var(--text)}
+  .q-opt.correct{background:var(--green-bg);border-color:var(--green)}
+  .q-opt.wrong{background:var(--red-bg);border-color:var(--red)}
+  .q-opt:disabled{cursor:default}
+  .q-explain{margin-top:12px;padding:10px 14px;background:var(--bg2);border-radius:var(--radius);font-size:13px;color:var(--text2);display:none}
+  .q-next{margin-top:1.25rem;padding:12px;border-radius:var(--radius);border:none;background:var(--text);color:#fff;font-size:14px;font-weight:600;cursor:pointer;display:none;width:100%}
+  .q-summary{text-align:center;padding:1rem 0}
+  .q-summary .score{font-size:44px;font-weight:700}
+  footer{text-align:center;font-size:11px;color:var(--text3);margin-top:2rem}
+</style>
+</head>
+<body>
+<div class="page">
+  <a class="back" href="index.html">← Back to L1 scenarios</a>
+  <header>
+    <div class="kicker">The Speech Studio — L1 Fluency Program</div>
+    <h1>Fluency Diagnostic</h1>
+    <p class="sub">Three quick, free checks — speaking pace, office idioms, and grammar &amp; vocabulary. All run right here in your browser, nothing is sent anywhere.</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-panel="pace">Speaking Pace</button>
+    <button class="tab" data-panel="idioms">Office Idioms</button>
+    <button class="tab" data-panel="grammar">Grammar &amp; Vocabulary</button>
+    <button class="tab" data-panel="voice">Voice &amp; Pitch</button>
+  </div>
+
+  <!-- PACE PANEL -->
+  <div class="panel active" id="panel-pace">
+    <p style="font-size:14px;color:var(--text2);margin-bottom:1rem;line-height:1.6">Press start and speak naturally for 30 seconds about anything — your weekend, your job, a recent project. Press stop when the timer ends (or earlier).</p>
+    <div id="pace-unsupported" class="not-supported" style="display:none">Your browser doesn't support live speech recognition (this works best in Chrome or Edge). Try this diagnostic on a Chrome browser instead.</div>
+    <div id="pace-supported">
+      <div style="background:var(--blue-bg);color:var(--blue-tc);padding:10px 14px;border-radius:var(--radius);font-size:12.5px;line-height:1.5;margin-bottom:1rem">This check needs <strong>Chrome or Edge</strong>, and it will ask for <strong>microphone permission</strong> — please tap "Allow" when your browser prompts you, or the recording won't work.</div>
+      <button class="mic-btn" id="mic-btn">🎙️ Start speaking (30s)</button>
+      <div class="transcript" id="transcript">Your speech will appear here as you talk...</div>
+      <div class="pace-result" id="pace-result">
+        <div class="pace-number" id="wpm-number">—</div>
+        <div class="pace-label">words per minute</div>
+        <div class="pace-band" id="pace-band"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- IDIOMS PANEL -->
+  <div class="panel" id="panel-idioms">
+    <div id="idioms-quiz"></div>
+  </div>
+
+  <!-- GRAMMAR PANEL -->
+  <div class="panel" id="panel-grammar">
+    <div id="grammar-quiz"></div>
+  </div>
+
+  <!-- VOICE & PITCH PANEL -->
+  <div class="panel" id="panel-voice">
+    <div style="background:var(--blue-bg);color:var(--blue-tc);padding:10px 14px;border-radius:var(--radius);font-size:12.5px;line-height:1.5;margin-bottom:1rem">This check needs <strong>Chrome or Edge</strong> and <strong>microphone permission</strong>. It measures pitch range and modulation only — pronunciation patterns are flagged for your coach to listen for, not auto-graded.</div>
+    <div id="voice-unsupported" class="not-supported" style="display:none">Your browser doesn't support this check. Try Chrome or Edge instead.</div>
+    <div id="voice-supported">
+      <p style="font-size:13px;color:var(--text3);text-transform:uppercase;font-weight:700;letter-spacing:0.05em;margin-bottom:8px">Read this passage aloud at a natural pace</p>
+      <div style="background:var(--bg2);padding:16px;border-radius:var(--radius);font-size:15px;line-height:1.7;margin-bottom:1rem">
+        "Good morning, everyone. I want to briefly walk you through this quarter's results. We have seen a significant increase in revenue, although the volume of new clients was slightly lower than expected. Thank you for your patience while we work through these details together, and please feel free to ask questions whenever you'd like."
+      </div>
+      <button class="mic-btn" id="voice-mic-btn">🎙️ Start reading</button>
+      <audio id="voice-playback" controls style="width:100%;margin-top:1rem;display:none"></audio>
+
+      <div class="pace-result" id="voice-result">
+        <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:1.25rem">
+          <div><div class="pace-number" id="pitch-range-number" style="font-size:32px">—</div><div class="pace-label">pitch range (semitones)</div></div>
+          <div><div class="pace-number" id="pitch-mod-number" style="font-size:32px">—</div><div class="pace-label">modulation score</div></div>
+        </div>
+        <div class="pace-band" id="pitch-band" style="margin-top:14px"></div>
+
+        <div style="margin-top:1.25rem;padding-top:1rem;border-top:0.5px solid var(--border)">
+          <div class="field-label" style="margin-bottom:8px">What your coach should listen for in this passage</div>
+          <ul style="font-size:13px;color:var(--text2);line-height:1.9;padding-left:18px">
+            <li><strong>"very," "volume," "we," "walk," "want"</strong> — v/w sound clarity</li>
+            <li><strong>"think," "through," "thank," "although," "together"</strong> — th sound (dental fricative) placement</li>
+            <li><strong>"patience," "questions," "significant"</strong> — consonant cluster and stress handling</li>
+            <li><strong>"quarter's," "clients," "details"</strong> — final consonant clarity, not dropped</li>
+            <li>Overall sentence stress — English is stress-timed (some words hit harder than others), not every syllable equal weight</li>
+          </ul>
+          <p style="font-size:12px;color:var(--text3);margin-top:10px">This list is a coaching reference, not an automated result — play back the recording above and listen alongside it.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>© THE SPEECH STUDIO — L1 Fluency Diagnostic (runs entirely in your browser, no data sent, no cost per use)</footer>
+</div>
+
+<script>
+// ── SHARE EVERY ATTEMPT WITH COACH ──
+// Use the SAME Apps Script URL as index.html — one shared sheet for the whole tool.
+const COACH_SHEET_URL = 'https://script.google.com/macros/s/AKfycbzWsp4lK6F0vnyGyynP5GvdtL8LLVXgT2Pz4rRYhym6_yT9uu-SLIlAgZtQmaLkXBZSTw/exec
+';
+function notifyCoach(data){
+  try{
+    const payload = new URLSearchParams({ timestamp: new Date().toISOString(), tool: 'L1-Diagnostic', ...data });
+    fetch(COACH_SHEET_URL, { method:'POST', mode:'no-cors', body: payload }).catch(()=>{});
+  }catch(e){}
+}
+
+/* ===================== TAB SWITCHING ===================== */
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.onclick = ()=>{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-'+tab.dataset.panel).classList.add('active');
+  };
+});
+
+/* ===================== SPEECH PACE ===================== */
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition, recording = false, startTime, wordCount = 0, timerHandle;
+
+if (!SpeechRec) {
+  document.getElementById('pace-unsupported').style.display = 'block';
+  document.getElementById('pace-supported').style.display = 'none';
+} else {
+  recognition = new SpeechRec();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'en-US';
+
+  let finalTranscript = '';
+
+  recognition.onresult = (event) => {
+    let interim = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const t = event.results[i][0].transcript;
+      if (event.results[i].isFinal) finalTranscript += t + ' ';
+      else interim += t;
+    }
+    document.getElementById('transcript').textContent = finalTranscript + interim || 'Listening...';
+    wordCount = (finalTranscript + interim).trim().split(/\s+/).filter(Boolean).length;
+  };
+
+  recognition.onerror = () => stopRecording();
+
+  const micBtn = document.getElementById('mic-btn');
+  micBtn.addEventListener('click', () => {
+    if (!recording) startRecording(); else stopRecording();
+  });
+
+  function startRecording(){
+    finalTranscript = '';
+    wordCount = 0;
+    document.getElementById('transcript').textContent = 'Listening...';
+    document.getElementById('pace-result').style.display = 'none';
+    recording = true;
+    startTime = Date.now();
+    micBtn.textContent = '⏹ Stop (auto-stops at 30s)';
+    micBtn.classList.add('recording');
+    recognition.start();
+    timerHandle = setTimeout(stopRecording, 30000);
+  }
+
+  function stopRecording(){
+    if (!recording) return;
+    recording = false;
+    clearTimeout(timerHandle);
+    recognition.stop();
+    micBtn.textContent = '🎙️ Start speaking (30s)';
+    micBtn.classList.remove('recording');
+    const elapsedMin = Math.max((Date.now() - startTime) / 60000, 0.05);
+    const wpm = Math.round(wordCount / elapsedMin);
+    showPaceResult(wpm);
+  }
+
+  function showPaceResult(wpm){
+    document.getElementById('wpm-number').textContent = wpm;
+    const bandEl = document.getElementById('pace-band');
+    let band, colorBg, colorText;
+    if (wpm < 100) {
+      band = "On the slower side. This often reads as thoughtful and deliberate — but in fast-paced meetings it can also cost you the floor. Practice: read a paragraph aloud aiming to pick up pace by 15% without losing clarity.";
+      colorBg = 'var(--bg2)'; colorText = 'var(--text2)';
+    } else if (wpm <= 160) {
+      band = "This is the ideal range for clear business speech (roughly 110–160 WPM) — easy to follow, confident, unrushed.";
+      colorBg = 'var(--green-bg)'; colorText = 'var(--green)';
+    } else {
+      band = "On the faster side. Great energy, but at this pace listeners can miss key points. Practice: add a deliberate pause after every main point — let it land before moving on.";
+      colorBg = 'var(--red-bg)'; colorText = 'var(--red)';
+    }
+    bandEl.style.background = colorBg;
+    bandEl.style.color = colorText;
+    bandEl.textContent = band;
+    document.getElementById('pace-result').style.display = 'block';
+    notifyCoach({ check: 'Speaking Pace', wpm });
+  }
+}
+
+/* ===================== QUIZ ENGINE (shared by idioms + grammar) ===================== */
+function buildQuiz(containerId, questions, checkLabel){
+  let current = 0, score = 0;
+  const container = document.getElementById(containerId);
+
+  function renderQuestion(){
+    const q = questions[current];
+    container.innerHTML = `
+      <div class="q-progress">Question ${current+1} of ${questions.length}</div>
+      <div class="q-text">${q.q}</div>
+      <div class="q-options">
+        ${q.options.map((opt,i)=>`<button class="q-opt" data-i="${i}">${opt}</button>`).join('')}
+      </div>
+      <div class="q-explain" id="q-explain">${q.explain}</div>
+      <button class="q-next" id="q-next">${current === questions.length-1 ? 'See my score' : 'Next question'}</button>
+    `;
+    container.querySelectorAll('.q-opt').forEach(btn=>{
+      btn.onclick = ()=>{
+        container.querySelectorAll('.q-opt').forEach(b=>b.disabled = true);
+        const i = parseInt(btn.dataset.i);
+        if (i === q.correct){ btn.classList.add('correct'); score++; }
+        else {
+          btn.classList.add('wrong');
+          container.querySelector(`[data-i="${q.correct}"]`).classList.add('correct');
+        }
+        document.getElementById('q-explain').style.display = 'block';
+        document.getElementById('q-next').style.display = 'block';
+      };
+    });
+    document.getElementById('q-next').onclick = ()=>{
+      current++;
+      if (current < questions.length) renderQuestion();
+      else renderSummary();
+    };
+  }
+
+  function renderSummary(){
+    notifyCoach({ check: checkLabel, score: score + '/' + questions.length });
+    container.innerHTML = `
+      <div class="q-summary">
+        <div class="score">${score}/${questions.length}</div>
+        <div style="color:var(--text2);font-size:14px;margin-bottom:1.25rem">${scoreMessage(score, questions.length)}</div>
+        <button class="q-next" style="display:block" id="q-retry">Retake this check</button>
+      </div>
+    `;
+    document.getElementById('q-retry').onclick = ()=>{ current = 0; score = 0; renderQuestion(); };
+  }
+
+  function scoreMessage(s, total){
+    const pct = s/total;
+    if (pct === 1) return "Perfect score — this area is a strength, not a gap.";
+    if (pct >= 0.7) return "Solid grasp — a couple of gaps worth reviewing with your coach.";
+    return "This is a good coaching focus area — worth dedicated practice time.";
+  }
+
+  renderQuestion();
+}
+
+/* ===================== IDIOMS CONTENT ===================== */
+const IDIOM_QUESTIONS = [
+  { q: "What does \"let's touch base\" mean in an office context?", options: ["Let's have a brief check-in or update", "Let's start the meeting from scratch", "Let's disagree on the plan", "Let's cancel the project"], correct: 0, explain: "\"Touch base\" means a short, informal check-in — not a full meeting." },
+  { q: "\"Can you circle back on this by Friday?\" is asking you to...", options: ["Draw a diagram of the process", "Return to this topic/task and follow up later", "Walk in a circle around the office", "Reject the request"], correct: 1, explain: "\"Circle back\" means revisit or follow up on something after some time has passed." },
+  { q: "A colleague says an idea won't \"move the needle.\" They mean it...", options: ["Is illegal", "Will make a significant, measurable impact", "Won't make a meaningful difference to results", "Needs urgent approval"], correct: 2, explain: "\"Move the needle\" refers to making a noticeable impact on a metric — saying something WON'T move it means it's low-impact." },
+  { q: "\"That's some low-hanging fruit\" refers to a task that is...", options: ["Very difficult and risky", "Easy to accomplish with high visible value", "Not worth doing at all", "A dessert served at the office party"], correct: 1, explain: "\"Low-hanging fruit\" = an easy win — something quick to achieve with good return." },
+  { q: "\"Let's make sure we're on the same page\" means the speaker wants to...", options: ["Read the same document literally", "Confirm everyone shares the same understanding", "Assign the same task to everyone", "End the discussion immediately"], correct: 1, explain: "\"On the same page\" = shared understanding or alignment, not literal reading." },
+  { q: "\"I don't have the bandwidth for this right now\" means the speaker...", options: ["Has a slow internet connection", "Doesn't have enough time or capacity currently", "Refuses to ever do the task", "Needs a bigger office"], correct: 1, explain: "\"Bandwidth\" here is a metaphor for available time/capacity, borrowed from networking." },
+  { q: "\"Can you give me a ballpark figure?\" is a request for...", options: ["An exact, audited number", "A rough estimate, not a precise number", "A number written in a stadium context", "A refusal to answer"], correct: 1, explain: "\"Ballpark figure\" = an approximate estimate, useful for early planning." },
+  { q: "\"Let's do a deep dive on this next week\" suggests...", options: ["A quick, surface-level glance", "An in-depth, detailed review of the topic", "Skipping the topic entirely", "A team outing to a pool"], correct: 1, explain: "\"Deep dive\" = thorough, detailed analysis — the opposite of a quick overview." },
+  { q: "\"Let's think outside the box\" is encouraging...", options: ["Sticking closely to existing processes", "Creative, unconventional solutions", "Working outside office premises", "Reducing the project scope"], correct: 1, explain: "\"Outside the box\" thinking means moving past conventional or expected approaches." },
+  { q: "If a manager says \"put a pin in that,\" they mean...", options: ["Reject the idea permanently", "Pause this topic and revisit it later", "Print the document immediately", "Approve it without discussion"], correct: 1, explain: "\"Put a pin in it\" = temporarily set aside a topic to come back to later, like a placeholder." }
+];
+
+/* ===================== GRAMMAR & VOCAB CONTENT ===================== */
+const GRAMMAR_QUESTIONS = [
+  { q: "Which sentence is correct?", options: ["Please revert back to me by Friday.", "Please revert to me by Friday.", "Please reverting to me by Friday.", "Please to revert me by Friday."], correct: 1, explain: "\"Revert\" already means \"return/reply\" — adding \"back\" is redundant. \"Please revert to me\" is correct and cleaner." },
+  { q: "Which is correct?", options: ["Let's discuss about the budget tomorrow.", "Let's discuss the budget tomorrow.", "Let's discussing the budget tomorrow.", "Let's to discuss the budget tomorrow."], correct: 1, explain: "\"Discuss\" is already transitive — it doesn't need \"about\" after it. \"Discuss the budget\" is correct." },
+  { q: "Choose the correct sentence:", options: ["The data is showing strong growth.", "The data are showing strong growth.", "The datas is showing strong growth.", "The dataes show strong growth."], correct: 1, explain: "In formal/technical usage, \"data\" is treated as a plural noun (singular: datum) — \"data are\" is the traditionally correct form, though \"data is\" is increasingly accepted informally. For formal business writing, \"data are\" is safest." },
+  { q: "Which sentence uses \"effect\"/\"affect\" correctly?", options: ["The delay will effect our timeline.", "The delay will affect our timeline.", "The delay will affects our timeline.", "The delay will affected our timeline."], correct: 1, explain: "\"Affect\" is usually the verb (to influence); \"effect\" is usually the noun (a result). \"Will affect\" is correct here." },
+  { q: "Which is correct?", options: ["Kindly do the needful at the earliest.", "Please complete this by [specific date/time].", "Kindly revert with the needful.", "Please do needful kindly."], correct: 1, explain: "\"Do the needful\" and \"kindly\" are common in some regional business English but read as vague or overly formal in international/global corporate contexts. A specific, direct request is clearer and more professional." },
+  { q: "Choose the correctly punctuated sentence:", options: ["Its important that the team meets its deadline.", "It's important that the team meets its deadline.", "It's important that the team meets it's deadline.", "Its important that the team meets it's deadline."], correct: 1, explain: "\"It's\" = it is / it has. \"Its\" = possessive. Correct: \"It's important that the team meets its deadline.\"" },
+  { q: "Which sentence has correct subject-verb agreement?", options: ["Each of the reports were reviewed.", "Each of the reports was reviewed.", "Each of the reports have been reviewed.", "Each of the reports are reviewing."], correct: 1, explain: "\"Each\" is singular, even when followed by a plural noun (\"of the reports\") — so it takes a singular verb: \"was reviewed.\"" },
+  { q: "Which is the more precise, professional phrasing?", options: ["We need to loop in the client ASAP.", "We need to inform the client as soon as possible.", "We need to loop the client in real quick.", "We need to hit up the client ASAP."], correct: 1, explain: "\"Loop in,\" \"real quick,\" and \"hit up\" are casual/slang. In formal business writing or with senior stakeholders, \"inform... as soon as possible\" reads as more professional and precise." },
+  { q: "Which sentence correctly uses \"fewer\" vs \"less\"?", options: ["We received less applications this year.", "We received fewer applications this year.", "We received fewer of applications this year.", "We received less amount applications this year."], correct: 1, explain: "\"Fewer\" is for countable nouns (applications); \"less\" is for uncountable quantities (time, money, effort)." },
+  { q: "Which sentence is grammatically correct?", options: ["Between you and I, this plan needs work.", "Between you and me, this plan needs work.", "Between I and you, this plan needs work.", "Between myself and you, this plan needs work."], correct: 1, explain: "\"Between\" is a preposition and takes object pronouns — \"me,\" not \"I.\" \"Between you and me\" is correct." }
+];
+
+buildQuiz('idioms-quiz', IDIOM_QUESTIONS, 'Office Idioms');
+buildQuiz('grammar-quiz', GRAMMAR_QUESTIONS, 'Grammar & Vocabulary');
+
+/* ===================== VOICE & PITCH ===================== */
+(function(){
+  const hasGetUserMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  const hasAudioContext = !!(window.AudioContext || window.webkitAudioContext);
+
+  if (!hasGetUserMedia || !hasAudioContext) {
+    document.getElementById('voice-unsupported').style.display = 'block';
+    document.getElementById('voice-supported').style.display = 'none';
+    return;
+  }
+
+  const micBtn = document.getElementById('voice-mic-btn');
+  let recording = false, mediaRecorder, audioChunks = [], audioCtx, analyser, source, pitchSamples = [], rafId, stream;
+
+  micBtn.addEventListener('click', () => {
+    if (!recording) startVoiceCapture(); else stopVoiceCapture();
+  });
+
+  async function startVoiceCapture(){
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks = [];
+    pitchSamples = [];
+
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(audioChunks, { type: 'audio/webm' });
+      const url = URL.createObjectURL(blob);
+      const player = document.getElementById('voice-playback');
+      player.src = url;
+      player.style.display = 'block';
+    };
+    mediaRecorder.start();
+
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    source = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    source.connect(analyser);
+
+    recording = true;
+    micBtn.textContent = '⏹ Stop reading';
+    micBtn.classList.add('recording');
+    document.getElementById('voice-result').style.display = 'none';
+
+    trackPitch();
+  }
+
+  function trackPitch(){
+    const buf = new Float32Array(analyser.fftSize);
+    function tick(){
+      if (!recording) return;
+      analyser.getFloatTimeDomainData(buf);
+      const freq = autoCorrelate(buf, audioCtx.sampleRate);
+      if (freq > 0) pitchSamples.push(freq);
+      rafId = requestAnimationFrame(tick);
+    }
+    tick();
+  }
+
+  function stopVoiceCapture(){
+    recording = false;
+    cancelAnimationFrame(rafId);
+    mediaRecorder.stop();
+    stream.getTracks().forEach(t => t.stop());
+    audioCtx.close();
+    micBtn.textContent = '🎙️ Start reading';
+    micBtn.classList.remove('recording');
+    showPitchResult();
+  }
+
+  function hzToSemitone(hz){ return 12 * Math.log2(hz / 440); }
+
+  function showPitchResult(){
+    // filter out noise/outliers using the 10th-90th percentile band
+    const sorted = pitchSamples.slice().sort((a,b)=>a-b);
+    const lo = sorted[Math.floor(sorted.length*0.1)] || sorted[0];
+    const hi = sorted[Math.floor(sorted.length*0.9)] || sorted[sorted.length-1];
+    if (!lo || !hi) {
+      document.getElementById('pitch-band').textContent = "Not enough clear voice signal was captured — try again in a quieter room, closer to the mic.";
+      document.getElementById('voice-result').style.display = 'block';
+      return;
+    }
+    const semitoneRange = Math.abs(hzToSemitone(hi) - hzToSemitone(lo));
+    const mean = sorted.reduce((a,b)=>a+b,0) / sorted.length;
+    const variance = sorted.reduce((a,b)=>a+(b-mean)*(b-mean),0) / sorted.length;
+    const modScore = Math.round(Math.sqrt(variance));
+
+    document.getElementById('pitch-range-number').textContent = semitoneRange.toFixed(1);
+    document.getElementById('pitch-mod-number').textContent = modScore;
+
+    let msg;
+    if (semitoneRange < 4) {
+      msg = "This range reads as fairly monotone — expanding pitch variation on key words can make delivery sound more engaged and confident. Practice: exaggerate pitch on the ONE most important word per sentence.";
+    } else if (semitoneRange <= 10) {
+      msg = "This is a healthy, natural pitch range — expressive without being erratic. This is the range most confident business speakers fall into.";
+    } else {
+      msg = "This is a wide pitch range — expressive, but at the high end it can occasionally read as less controlled in formal settings. Worth checking in on a live coaching call.";
+    }
+    document.getElementById('pitch-band').style.background = 'var(--bg2)';
+    document.getElementById('pitch-band').style.color = 'var(--text2)';
+    document.getElementById('pitch-band').textContent = msg;
+    document.getElementById('voice-result').style.display = 'block';
+    notifyCoach({ check: 'Voice & Pitch', pitchRangeSemitones: semitoneRange.toFixed(1), modulationScore: modScore });
+  }
+
+  // Standard autocorrelation pitch detection (returns -1 if no clear pitch found)
+  function autoCorrelate(buf, sampleRate){
+    const SIZE = buf.length;
+    let rms = 0;
+    for (let i=0;i<SIZE;i++) rms += buf[i]*buf[i];
+    rms = Math.sqrt(rms/SIZE);
+    if (rms < 0.01) return -1; // too quiet / silence
+
+    let r1=0, r2=SIZE-1, thres=0.2;
+    for (let i=0;i<SIZE/2;i++){ if (Math.abs(buf[i])<thres){ r1=i; break; } }
+    for (let i=1;i<SIZE/2;i++){ if (Math.abs(buf[SIZE-i])<thres){ r2=SIZE-i; break; } }
+    const trimmed = buf.slice(r1, r2);
+    const newSize = trimmed.length;
+
+    const c = new Array(newSize).fill(0);
+    for (let lag=0; lag<newSize; lag++){
+      for (let i=0; i<newSize-lag; i++) c[lag] += trimmed[i]*trimmed[i+lag];
+    }
+    let d = 0; while (c[d] > c[d+1]) d++;
+    let maxVal = -1, maxPos = -1;
+    for (let i=d;i<newSize;i++){ if (c[i]>maxVal){ maxVal=c[i]; maxPos=i; } }
+    let T0 = maxPos;
+    if (T0 <= 0) return -1;
+
+    const freq = sampleRate / T0;
+    if (freq < 60 || freq > 500) return -1; // outside plausible human voice range
+    return freq;
+  }
+})();
+</script>
+</body>
+</html>
