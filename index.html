@@ -88,8 +88,7 @@
 // ── SHARE EVERY ATTEMPT WITH COACH ──
 // Replace the line below with your Apps Script URL from COACH-LOG-SETUP.md
 // Use the SAME URL in every tool file — they all report to one shared sheet.
-const COACH_SHEET_URL = 'https://script.google.com/macros/s/AKfycbzWsp4lK6F0vnyGyynP5GvdtL8LLVXgT2Pz4rRYhym6_yT9uu-SLIlAgZtQmaLkXBZSTw/exec
-';
+const COACH_SHEET_URL = 'https://script.google.com/macros/s/AKfycbzWsp4lK6F0vnyGyynP5GvdtL8LLVXgT2Pz4rRYhym6_yT9uu-SLIlAgZtQmaLkXBZSTw/exec';
 function notifyCoach(data){
   try{
     const payload = new URLSearchParams({ timestamp: new Date().toISOString(), tool: 'L1-Scenarios', ...data });

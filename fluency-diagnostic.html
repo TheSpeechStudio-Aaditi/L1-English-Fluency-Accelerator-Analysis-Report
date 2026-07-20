@@ -140,8 +140,7 @@
 <script>
 // ── SHARE EVERY ATTEMPT WITH COACH ──
 // Use the SAME Apps Script URL as index.html — one shared sheet for the whole tool.
-const COACH_SHEET_URL = 'https://script.google.com/macros/s/AKfycbzWsp4lK6F0vnyGyynP5GvdtL8LLVXgT2Pz4rRYhym6_yT9uu-SLIlAgZtQmaLkXBZSTw/exec
-';
+const COACH_SHEET_URL = 'https://script.google.com/macros/s/AKfycbzWsp4lK6F0vnyGyynP5GvdtL8LLVXgT2Pz4rRYhym6_yT9uu-SLIlAgZtQmaLkXBZSTw/exec';
 function notifyCoach(data){
   try{
     const payload = new URLSearchParams({ timestamp: new Date().toISOString(), tool: 'L1-Diagnostic', ...data });
